@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TV Chile Online</title>
-    <!-- Cargamos la librería HLS para reproducir los streams .m3u8 -->
+    <!-- Librería HLS para reproducir streams .m3u8 en Android, Windows y Smart TV -->
     <script src="https://jsdelivr.net"></script>
     <style>
         body {
@@ -47,21 +47,25 @@
             background-color: #0b7dda;
         }
         h2 { margin-top: 15px; color: #bbb; }
+        .aviso { font-size: 13px; color: #ffeb3b; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>TV Abierta Chile</h1>
-    <video id="video" controls autoplay muted></video>
+    
+    <!-- El reproductor corregido con muted y playsinline para evitar que los celulares lo bloqueen -->
+    <video id="video" controls autoplay muted playsinline webkit-playsinline></video>
+    
+    <p class="aviso">⚠️ Nota: El reproductor inicia silenciado por seguridad del celular. Activa el sonido manualmente.</p>
     <h2 id="canal-actual">Selecciona un canal</h2>
 
     <div class="grid-canales">
-        <!-- Puedes actualizar las URL .m3u8 si los canales las cambian -->
         <button onclick="cargarCanal('https://wurl.tv', 'Chilevisión')">Chilevisión</button>
-        <button onclick="cargarCanal('https://subatv.com', 'Canal 13')">Canal 13</button>
-        <button onclick="cargarCanal('https://tvn.cl', 'TVN')">TVN</button>
+        <button onclick="cargarCanal('https://tvn.cl', 'TVN HD')">TVN</button>
         <button onclick="cargarCanal('https://tvn.cl', 'NTV (Cultural)')">NTV</button>
+        <button onclick="cargarCanal('https://subatv.com', 'Canal 13 (Alternativo)')">Canal 13</button>
     </div>
 </div>
 
@@ -71,22 +75,30 @@
     let hls = null;
 
     function cargarCanal(url, nombre) {
-        txtCanal.innerText = "Reproduciendo: " + nombre;
+        txtCanal.innerText = "Cargando: " + nombre + "...";
         
+        // Configuración para Android / Chrome / Windows / Smart TV
         if (Hls.isSupported()) {
-            if (hls) { hls.destroy(); } // Limpia el canal anterior
+            if (hls) { hls.destroy(); } 
             hls = new Hls();
             hls.loadSource(url);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                video.play();
+                txtCanal.innerText = "Reproduciendo: " + nombre;
+                video.play().catch(e => console.log("Autoplay bloqueado:", e));
+            });
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    txtCanal.innerText = "Error cargando " + nombre + " (Señal inestable o caída)";
+                }
             });
         } 
-        // Compatibilidad nativa para navegadores Apple (Safari / iOS)
+        // Configuración nativa para Apple (Safari en iPhone / iPad / Mac)
         else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = url;
             video.addEventListener('loadedmetadata', function() {
-                video.play();
+                txtCanal.innerText = "Reproduciendo: " + nombre;
+                video.play().catch(e => console.log("Autoplay bloqueado:", e));
             });
         }
     }
