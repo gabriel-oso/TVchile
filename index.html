@@ -3,69 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>TV Chile Online</title>
-    <!-- Librería HLS para reproducir streams .m3u8 en Android, Windows y Smart TV -->
+    <title>TV Chile Limpio</title>
     <script src="https://jsdelivr.net"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: white;
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-        }
-        .container {
-            max-width: 800px;
-            margin: auto;
-        }
-        video {
-            width: 100%;
-            max-height: 450px;
-            background-color: black;
-            border-radius: 8px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-        .grid-canales {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-            gap: 15px;
-            margin-top: 25px;
-        }
-        button {
-            background-color: #2196F3;
-            color: white;
-            border: none;
-            padding: 12px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: 0.3s;
-        }
-        button:hover {
-            background-color: #0b7dda;
-        }
+        body { font-family: Arial, sans-serif; background-color: #121212; color: white; text-align: center; margin: 0; padding: 20px; }
+        .container { max-width: 800px; margin: auto; }
+        video { width: 100%; max-height: 450px; background-color: black; border-radius: 8px; }
+        .grid-canales { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px; margin-top: 25px; }
+        button { background-color: #E50914; color: white; border: none; padding: 12px; font-size: 16px; font-weight: bold; border-radius: 5px; cursor: pointer; transition: 0.3s; }
+        button:hover { background-color: #b20710; }
         h2 { margin-top: 15px; color: #bbb; }
-        .aviso { font-size: 13px; color: #ffeb3b; margin-top: 10px; }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <h1>TV Abierta Chile</h1>
-    
-    <!-- El reproductor corregido con muted y playsinline para evitar que los celulares lo bloqueen -->
+    <h1>TV Abierta Chile (Sin Publicidad)</h1>
     <video id="video" controls autoplay muted playsinline webkit-playsinline></video>
-    
-    <p class="aviso">⚠️ Nota: El reproductor inicia silenciado por seguridad del celular. Activa el sonido manualmente.</p>
     <h2 id="canal-actual">Selecciona un canal</h2>
 
     <div class="grid-canales">
+        <!-- Señales procesadas por servidores de distribución alternativos que no bloquean navegadores móviles -->
         <button onclick="cargarCanal('https://wurl.tv', 'Chilevisión')">Chilevisión</button>
+        <button onclick="cargarCanal('https://mdstrm.com', 'Canal 13')">Canal 13</button>
         <button onclick="cargarCanal('https://tvn.cl', 'TVN HD')">TVN</button>
-        <button onclick="cargarCanal('https://tvn.cl', 'NTV (Cultural)')">NTV</button>
-        <button onclick="cargarCanal('https://subatv.com', 'Canal 13 (Alternativo)')">Canal 13</button>
+        <button onclick="cargarCanal('https://tvn.cl', 'NTV')">NTV</button>
     </div>
 </div>
 
@@ -75,30 +37,36 @@
     let hls = null;
 
     function cargarCanal(url, nombre) {
-        txtCanal.innerText = "Cargando: " + nombre + "...";
+        txtCanal.innerText = "Conectando con " + nombre + "...";
         
-        // Configuración para Android / Chrome / Windows / Smart TV
+        // Usamos un puente CORS público alternativo directo para evitar el bloqueo del navegador móvil
+        const proxyUrl = "https://allorigins.win" + encodeURIComponent(url);
+        
+        // Si el canal es TVN o NTV usamos su ruta directa porque manejan tokens dinámicos independientes
+        const urlFinal = (url.includes('tvn.cl') || url.includes('wurl.tv')) ? url : proxyUrl;
+
         if (Hls.isSupported()) {
             if (hls) { hls.destroy(); } 
-            hls = new Hls();
-            hls.loadSource(url);
+            hls = new Hls({
+                xhrSetup: function (xhr, url) {
+                    xhr.withCredentials = false; // Remueve cookies que gatillan bloqueos de seguridad
+                }
+            });
+            hls.loadSource(urlFinal);
             hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, function() {
                 txtCanal.innerText = "Reproduciendo: " + nombre;
-                video.play().catch(e => console.log("Autoplay bloqueado:", e));
+                video.play().catch(e => console.log("Espera interacción del usuario"));
             });
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal) {
-                    txtCanal.innerText = "Error cargando " + nombre + " (Señal inestable o caída)";
-                }
+            hls.on(Hls.Events.ERROR, function(event, data) {
+                if (data.fatal) { txtCanal.innerText = " Error en señal. Reintenta otro canal."; }
             });
         } 
-        // Configuración nativa para Apple (Safari en iPhone / iPad / Mac)
         else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = url;
+            video.src = urlFinal;
             video.addEventListener('loadedmetadata', function() {
                 txtCanal.innerText = "Reproduciendo: " + nombre;
-                video.play().catch(e => console.log("Autoplay bloqueado:", e));
+                video.play();
             });
         }
     }
