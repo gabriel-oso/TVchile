@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TV Chile Online</title>
+    <!-- Cargamos la librería HLS para reproducir los streams .m3u8 -->
+    <script src="https://jsdelivr.net"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #121212;
+            color: white;
+            text-align: center;
+            margin: 0;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: auto;
+        }
+        video {
+            width: 100%;
+            max-height: 450px;
+            background-color: black;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .grid-canales {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 15px;
+            margin-top: 25px;
+        }
+        button {
+            background-color: #2196F3;
+            color: white;
+            border: none;
+            padding: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+        button:hover {
+            background-color: #0b7dda;
+        }
+        h2 { margin-top: 15px; color: #bbb; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>TV Abierta Chile</h1>
+    <video id="video" controls autoplay muted></video>
+    <h2 id="canal-actual">Selecciona un canal</h2>
+
+    <div class="grid-canales">
+        <!-- Puedes actualizar las URL .m3u8 si los canales las cambian -->
+        <button onclick="cargarCanal('https://wurl.tv', 'Chilevisión')">Chilevisión</button>
+        <button onclick="cargarCanal('https://subatv.com', 'Canal 13')">Canal 13</button>
+        <button onclick="cargarCanal('https://tvn.cl', 'TVN')">TVN</button>
+        <button onclick="cargarCanal('https://tvn.cl', 'NTV (Cultural)')">NTV</button>
+    </div>
+</div>
+
+<script>
+    const video = document.getElementById('video');
+    const txtCanal = document.getElementById('canal-actual');
+    let hls = null;
+
+    function cargarCanal(url, nombre) {
+        txtCanal.innerText = "Reproduciendo: " + nombre;
+        
+        if (Hls.isSupported()) {
+            if (hls) { hls.destroy(); } // Limpia el canal anterior
+            hls = new Hls();
+            hls.loadSource(url);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                video.play();
+            });
+        } 
+        // Compatibilidad nativa para navegadores Apple (Safari / iOS)
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = url;
+            video.addEventListener('loadedmetadata', function() {
+                video.play();
+            });
+        }
+    }
+</script>
+
+</body>
+</html>
